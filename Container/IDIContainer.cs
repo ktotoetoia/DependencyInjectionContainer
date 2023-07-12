@@ -1,9 +1,11 @@
-﻿namespace DIContainer
+﻿using DIContainer.Bindings;
+
+namespace DIContainer
 {
     public interface IDIContainer
     {
-        public void BindSingle<Bind, To>(To to);
-
+        public IBinding Bind<ForUse>();
+        public IBinding Bind<For,Use>();
         public Type GetInstance<Type>();
     }
 }

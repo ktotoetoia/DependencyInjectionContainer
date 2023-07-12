@@ -1,5 +1,5 @@
 ﻿using System.Reflection;
-using System.Reflection.Metadata;
+using DIContainer.Bindings;
 
 namespace DIContainer
 {
@@ -7,16 +7,16 @@ namespace DIContainer
     {
         private List<IBinding> bindings = new List<IBinding>();
 
-        public void Bind<For, Use>()
+        public IBinding Bind<ForUse>()
+        {
+            return Bind<ForUse, ForUse>();
+        }
+
+        public IBinding Bind<For, Use>()
         {
             IBinding binding = new Binding(typeof(For), typeof(Use));
             bindings.Add(binding);
-        }
-
-        public void BindSingle<For, Use>(Use to)
-        {
-            ISingleBinding binding = new SingleBinding(typeof(For),typeof(Use),to);
-            bindings.Add(binding);
+            return binding;
         }
 
         public objectType GetInstance<objectType>()
@@ -26,14 +26,14 @@ namespace DIContainer
 
         private object GetInstance(Type type)
         {
-            return GetFromSingleBinding(type) ?? GetFromConstructor(type);
+            return GetFromInstance(type) ?? GetFromConstructor(type);
         }
 
-        private object GetFromSingleBinding(Type type)
+        private object GetFromInstance(Type type)
         {
             IBinding binding = GetBindingOfType(type);
 
-            return (binding as ISingleBinding)?.SingleObject;
+            return binding?.Instance;
         }
 
         private object GetFromConstructor(Type type)
@@ -53,18 +53,24 @@ namespace DIContainer
         private object GetBindingFromParameter(ParameterInfo parameter)
         {
             IBinding binding = GetBindingOfType(parameter.ParameterType);
-
-            if (binding != null)
-            {
-                return GetInstance(binding.For);
-            }
-
-            throw new Exception("Container has not binding of type: " + parameter.ParameterType);
+            
+            return GetInstance(binding.Use);
         }
 
         private ConstructorInfo GetMinConstructor(Type type)
         {
-            return type.GetConstructors().MinBy(x => x.GetParameters().Length);
+            ConstructorInfo[] constructors = type
+                .GetConstructors()
+                .Where(para=> para.GetParameters().All(x => GetBindingOfType(x.ParameterType) != null))
+                .OrderBy( x=> x.GetParameters().Count())
+                .ToArray();
+
+            if (constructors.Length == 0)
+            {
+                throw new Exception("have not bindings for type: " + type.Name);
+            }   
+            
+            return constructors.First();
         }
 
         private IBinding GetBindingOfType(Type type)
