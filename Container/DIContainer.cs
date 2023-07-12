@@ -44,17 +44,10 @@ namespace DIContainer
 
             foreach (var parameter in constructor.GetParameters())
             {
-                parameters.Add(GetBindingFromParameter(parameter));
+                parameters.Add(GetInstance(GetBindingOfType(parameter.ParameterType).Use));
             }
 
             return constructor.Invoke(parameters.ToArray());
-        }
-
-        private object GetBindingFromParameter(ParameterInfo parameter)
-        {
-            IBinding binding = GetBindingOfType(parameter.ParameterType);
-            
-            return GetInstance(binding.Use);
         }
 
         private ConstructorInfo GetMinConstructor(Type type)
